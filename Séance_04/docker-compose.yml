@@ -1,0 +1,8 @@
+version: '3.13'
+
+services:
+  python:
+    build: ./
+    volumes:
+      - "./src:/application"
+      - "./data:/application/data"
