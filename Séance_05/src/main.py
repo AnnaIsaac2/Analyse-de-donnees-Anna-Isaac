@@ -25,7 +25,7 @@ def ordreDecroissant(liste):
 def ordrePopulation(pop, etat):
     ordrepop = []
     for element in range(0, len(pop)):
-        if np.isnan(pop[element]) == False:
+        if np.isnan(pop[element]) == False and pop[element] != 0.0:
             ordrepop.append([float(pop[element]), etat[element]])
     ordrepop = ordreDecroissant(ordrepop)
     for element in range(0, len(ordrepop)):
@@ -33,31 +33,44 @@ def ordrePopulation(pop, etat):
     return ordrepop
 
 def classementPays(ordre1, ordre2):
+    rang2 = {}
+    for rang, etat in ordre2:
+        rang2[etat] = rang
     classement = []
-    if len(ordre1) <= len(ordre2):
-        for element1 in range(0, len(ordre2) - 1):
-            for element2 in range(0, len(ordre1) - 1):
-                if ordre2[element1][1] == ordre1[element2][1]:
-                    classement.append([ordre1[element2][0], ordre2[element1][0], ordre1[element2][1]])
-    else:
-        for element1 in range(0, len(ordre1) - 1):
-            for element2 in range(0, len(ordre2) - 1):
-                if ordre2[element2][1] == ordre1[element1][1]:
-                    classement.append([ordre1[element1][0], ordre2[element2][0], ordre1[element1][1]])
-                    
+    for rang, etat in ordre1:
+        if etat in rang2:
+            classement.append([rang, rang2[etat], etat])
+    classement.sort()
     return classement
 
-    if len(ordre1) <= len(ordre2):
-        for element1 in range(0, len(ordre2) - 1):
-            for element2 in range(0, len(ordre1) - 1):
-                if ordre2[element1][1] == ordre1[element2][1]:
-                    classement.append([ordre1[element2][0], ordre2[element1][0], ordre1[element2][1]])
-    else:
-        for element1 in range(0, len(ordre1) - 1):
-            for element2 in range(0, len(ordre2) - 1):
-                if ordre2[element2][1] == ordre1[element1][1]:
-                    classement.append([ordre1[element1][0], ordre2[element2][0], ordre1[element][1]])
-    return classement
+def isolerColonnes(classement):
+    rang1 = []
+    rang2 = []
+    for element in classement:
+        rang1.append(element[0])
+        rang2.append(element[1])
+    return rang1, rang2
+
+def analyseRangs(ordre1, ordre2):
+    rang1, rang2 = isolerColonnes(classementPays(ordre1, ordre2))
+    if len(rang1) < 3:
+        return np.nan, np.nan, len(rang1)
+    spearman = scipy.stats.spearmanr(rang1, rang2)[0]
+    kendall = scipy.stats.kendalltau(rang1, rang2)[0]
+    return spearman, kendall, len(rang1)
+
+def comparerToutesLesAnnees(donnees, annees, prefixe, colEtat):
+    etats = list(donnees[colEtat])
+    classements = []
+    for annee in annees:
+        valeurs = list(pd.to_numeric(donnees[prefixe + annee], errors="coerce"))
+        classements.append(ordrePopulation(valeurs, etats))
+    resultats = []
+    for i in range(len(annees)):
+        for j in range(i + 1, len(annees)):
+            s, k, n = analyseRangs(classements[i], classements[j])
+            resultats.append([annees[i], annees[j], s, k, n])
+    return pd.DataFrame(resultats, columns=["Année 1", "Année 2", "Spearman", "Kendall", "N États"])
 
 # Question 2
 print("Question 2")
@@ -90,18 +103,34 @@ print("Question 5")
 
 plt.plot(range(1, len(depenses2025SansNaN) + 1), depenses2025SansNaN)
 plt.xlabel("Rang")
-plt.ylabel("Dépenses militaires")
+plt.ylabel("Dépenses militaires (milliards USD courants)")
+plt.title("Classement des pays par dépenses militaires en 2025")
 plt.savefig("depenses2025.png")
 plt.close()
 
 # Question 6
 print("Question 6")
 
+
 logDepenses2025 = conversionLog(depenses2025SansNaN)
+logRang = conversionLog(list(range(1, len(depenses2025SansNaN) + 1)))
+
+plt.plot(logRang, logDepenses2025)
+plt.xlabel("log(Rang)")
+plt.ylabel("log(Dépenses militaires)")
+plt.savefig("depenses2025_log.png")
+plt.close()
 
 # Question 7
 print("Question 7")
-#Un test sur les rangs est possible car les dépenses militaires peuvent être classées selon un ordre de grandeur.
+
+# Oui, un test sur les rangs est possible. Les dépenses militaires peuvent être
+# ordonnées (classement des États du plus au moins dépensier), donc on peut les
+# traiter comme une variable ordinale. Les tests de Spearman et de Kendall
+# utilisent seulement l'ordre des États, pas les valeurs elles-mêmes. Ils sont
+# donc adaptés à cette distribution très inégale (quelques États dépensent
+# beaucoup plus que les autres) et ne sont pas faussés par les valeurs extrêmes.
+# Ils servent à comparer deux classements, par exemple celui de deux années.
 
 # Question 9
 print("Question 9")
@@ -135,48 +164,29 @@ classementDensite = classementPays(ordreDensite2007, ordreDensite2026)
 # Question 13
 print("Question 13")
 
-rang2007 = []
-rang2026 = []
-
-for element in classementPop:
-    rang2007.append(element[0])
-    rang2026.append(element[1])
+rangPop2007, rangPop2026 = isolerColonnes(classementPop)
+rangDensite2007, rangDensite2026 = isolerColonnes(classementDensite)
 
 # Question 14
 print("Question 14")
 
-spearman = scipy.stats.spearmanr(rang2007, rang2026)
-kendall = scipy.stats.kendalltau(rang2007, rang2026)
+print("Population :")
+print("Spearman :", scipy.stats.spearmanr(rangPop2007, rangPop2026))
+print("Kendall :", scipy.stats.kendalltau(rangPop2007, rangPop2026))
 
-print("Spearman :", spearman)
-print("Kendall :", kendall)
+print("Densité :")
+print("Spearman :", scipy.stats.spearmanr(rangDensite2007, rangDensite2026))
+print("Kendall :", scipy.stats.kendalltau(rangDensite2007, rangDensite2026))
 
 # Bonus
 print("Bonus")
 
-annees = ["2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025"]
+anneesMilitaires = [str(a) for a in range(1949, 2026)]
+resMilitaire = comparerToutesLesAnnees(depenses, anneesMilitaires, "", "État")
+resMilitaire.to_csv("bonus_depenses_militaires.csv", index=False)
+print(resMilitaire.head(10))
 
-classementsMilitaires = []
-
-for annee in annees:
-    depensesAnnee = list(pd.to_numeric(depenses[annee], errors="coerce"))
-    classementAnnee = ordrePopulation(depensesAnnee, list(depenses["État"]))
-    classementsMilitaires.append(classementAnnee)
-
-for i in range(len(annees)):
-    for j in range(i + 1, len(annees)):
-        classement = classementPays(classementsMilitaires[i], classementsMilitaires[j])
-
-        rang1 = []
-        rang2 = []
-
-        for element in classement:
-            rang1.append(element[0])
-            rang2.append(element[1])
-
-        spearman = scipy.stats.spearmanr(rang1, rang2)
-        kendall = scipy.stats.kendalltau(rang1, rang2)
-
-        print(annees[i], "-", annees[j])
-        print("Spearman :", spearman.correlation)
-        print("Kendall :", kendall.correlation)
+anneesPop = [str(a) for a in range(2007, 2027)]
+resPop = comparerToutesLesAnnees(etats, anneesPop, "Pop ", "État")
+resPop.to_csv("bonus_population.csv", index=False)
+print(resPop.head(10))
