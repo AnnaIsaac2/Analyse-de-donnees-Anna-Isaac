@@ -124,13 +124,12 @@ plt.close()
 # Question 7
 print("Question 7")
 
-# Oui, un test sur les rangs est possible. Les dépenses militaires peuvent être
-# ordonnées (classement des États du plus au moins dépensier), donc on peut les
-# traiter comme une variable ordinale. Les tests de Spearman et de Kendall
-# utilisent seulement l'ordre des États, pas les valeurs elles-mêmes. Ils sont
-# donc adaptés à cette distribution très inégale (quelques États dépensent
-# beaucoup plus que les autres) et ne sont pas faussés par les valeurs extrêmes.
-# Ils servent à comparer deux classements, par exemple celui de deux années.
+# Non, pas directement sur une seule série. Le rang est calculé à partir des
+# dépenses elles-mêmes : corréler le rang avec les dépenses donnerait une
+# relation parfaite (-1) sans intérêt statistique. Un test sur les rangs
+# (Spearman, Kendall) n'est possible que pour comparer deux classements
+# distincts, par exemple celui de deux années. On peut en revanche examiner
+# le graphique log-log, où une droite suggère une loi rang-taille.
 
 # Question 9
 print("Question 9")
