@@ -1,7 +1,7 @@
 version: '3.13'
 services:
   python:
-    restart: always
+    restart: "no"
     build: ./
     volumes:
       - "./src:/application"
